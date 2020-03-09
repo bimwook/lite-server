@@ -1,0 +1,1 @@
+go build -ldflags="-s -w" -o "./bin/litesvr.exe" ./src/litesvr.go 
