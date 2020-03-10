@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 	"io"
-	"muen"
 	"net/http"
 	"strconv"
 
+	"./services"
 	"./woo"
 )
 
@@ -21,14 +21,14 @@ func strToInt(s string, def int) int {
 }
 
 func buildMailSvr() {
-	woo.ResetMailCache()
-	chSave := make(chan *woo.MailItem)
+	services.ResetMailCache()
+	chSave := make(chan *services.MailItem)
 	chRemove := make(chan string)
 	http.HandleFunc("/mail/save.do", func(w http.ResponseWriter, r *http.Request) {
 		method := r.Method
 		if method == "POST" {
-			var item woo.MailItem
-			rowid := muen.NewKey()
+			var item services.MailItem
+			rowid := woo.NewSerial()
 			item.Rowid = rowid
 			item.Module = r.FormValue("module")
 			item.Sender = r.FormValue("sender")
@@ -49,7 +49,7 @@ func buildMailSvr() {
 			receiver := r.FormValue("receiver")
 			w.Header().Set("Server", servername)
 			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-			io.WriteString(w, woo.MailPeek(module, receiver))
+			io.WriteString(w, services.MailPeek(module, receiver))
 		} else {
 			io.WriteString(w, "Method: POST;\r\n")
 			io.WriteString(w, "Parametes: module, receiver;\r\n")
@@ -62,7 +62,7 @@ func buildMailSvr() {
 			receiver := r.FormValue("receiver")
 			w.Header().Set("Server", servername)
 			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-			rowid, data := woo.MailReceive(module, receiver)
+			rowid, data := services.MailReceive(module, receiver)
 			io.WriteString(w, data)
 			if rowid != "" {
 				chRemove <- rowid
@@ -78,11 +78,11 @@ func buildMailSvr() {
 			select {
 			case item := <-chSave:
 				{
-					woo.MailSave(item.Rowid, item.Module, item.Sender, item.Receiver, item.Data)
+					services.MailSave(item.Rowid, item.Module, item.Sender, item.Receiver, item.Data)
 				}
 			case rowid := <-chRemove:
 				{
-					woo.MailRemove(rowid)
+					services.MailRemove(rowid)
 				}
 			}
 		}
@@ -90,11 +90,11 @@ func buildMailSvr() {
 }
 
 func buildCenterSvr() {
-	chSave := make(chan *woo.CenterItem)
+	chSave := make(chan *services.CenterItem)
 	http.HandleFunc("/center/save.do", func(w http.ResponseWriter, r *http.Request) {
 		method := r.Method
 		if method == "POST" {
-			var item woo.CenterItem
+			var item services.CenterItem
 			item.Name = r.FormValue("name")
 			item.Dbase = r.FormValue("dbase")
 			item.Remark = r.FormValue("remark")
@@ -113,7 +113,7 @@ func buildCenterSvr() {
 			name := r.FormValue("name")
 			dbase := r.FormValue("dbase")
 			data := r.FormValue("data")
-			hcount := woo.CenterHash(name, dbase, data)
+			hcount := services.CenterHash(name, dbase, data)
 			w.Header().Set("Server", servername)
 			io.WriteString(w, `{"ret":true,"count":`+hcount+`}`)
 		} else {
@@ -127,7 +127,7 @@ func buildCenterSvr() {
 			name := r.FormValue("name")
 			dbase := r.FormValue("dbase")
 			rowid := r.FormValue("rowid")
-			remark, data := woo.CenterLoad(name, dbase, rowid)
+			remark, data := services.CenterLoad(name, dbase, rowid)
 			w.Header().Set("Server", servername)
 			io.WriteString(w, "# "+remark+"\r\n")
 			io.WriteString(w, data)
@@ -142,7 +142,7 @@ func buildCenterSvr() {
 			select {
 			case item := <-chSave:
 				{
-					woo.CenterSave(item.Name, item.Dbase, item.Remark, item.Data)
+					services.CenterSave(item.Name, item.Dbase, item.Remark, item.Data)
 				}
 			}
 		}
@@ -150,11 +150,11 @@ func buildCenterSvr() {
 }
 
 func main() {
-	startAt := muen.Now()
+	startAt := woo.Now()
 	woo.ResetMain()
 	http.HandleFunc("/now.do", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Server", servername)
-		w.Write([]byte(muen.Now()))
+		w.Write([]byte(woo.Now()))
 	})
 	buildMailSvr()
 	buildCenterSvr()
@@ -181,14 +181,19 @@ func main() {
 		io.WriteString(w, "  - about.do\r\n")
 	})
 
+	listening := woo.GetValue("server.listen-on")
+	if listening == "" {
+		woo.SetValue("server.listen-on", "11100")
+	}
+	port := strToInt(listening, 11100)
+
 	fmt.Println(" ")
-	fmt.Println(" Lite-Server: http://127.0.0.1:11100")
+	fmt.Println(" Lite-Server: http://127.0.0.1:" + strconv.Itoa(port))
 	fmt.Println("------------------------------------------------------------------")
 	fmt.Println(" - EMAIL: woo@omuen.com")
 	fmt.Println(" - SERVER-UUID: " + woo.GetServerSerial())
 	fmt.Println("------------------------------------------------------------------")
 	fmt.Println(" Start-At: " + startAt)
-	muen.Send("<!>\r\n")
-	muen.Sendln("[Lite-Server] Start at " + startAt)
-	http.ListenAndServe(":11100", nil)
+
+	http.ListenAndServe(":"+strconv.Itoa(port), nil)
 }

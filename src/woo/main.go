@@ -3,13 +3,30 @@ package woo
 import (
 	"database/sql"
 	"fmt"
-	"muen"
+	"math/rand"
 	"os"
+	"strconv"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3" //Sqlite3
 )
 
 const maindb = "./dbase/main.db"
+
+//Now 当前日期及时间
+func Now() string {
+	return time.Now().Format("2006-01-02 15:04:05")
+}
+
+//NewSerial 返回一个随机字符串
+func NewSerial() string {
+	ret := time.Now().Format("20060102")
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	for i := 0; i < 40; i++ {
+		ret = ret + strconv.Itoa(r.Intn(10))
+	}
+	return ret
+}
 
 //ResetMain 初始化
 func ResetMain() {
@@ -17,7 +34,7 @@ func ResetMain() {
 	_, err := os.Stat(maindb)
 	if !((err == nil) || os.IsExist(err)) {
 		db, _ := sql.Open("sqlite3", maindb)
-		uuid := muen.NewKey()
+		uuid := NewSerial()
 		cmd := `
       CREATE TABLE IF NOT EXISTS [main] ([rowid] PRIMARY KEY, [content]);
       CREATE TABLE IF NOT EXISTS [meta] ([rowid] PRIMARY KEY, [name], [content]);
@@ -28,7 +45,7 @@ func ResetMain() {
       INSERT INTO [meta] ([rowid], [name], [content]) VALUES('server.created', 'SYSTEM', ?);
       INSERT INTO [main] ([rowid], [content]) VALUES('server.uuid', ?);
     `
-		_, e := db.Exec(cmd, uuid, muen.Now(), uuid)
+		_, e := db.Exec(cmd, uuid, Now(), uuid)
 		if e != nil {
 			fmt.Println(e)
 		}
@@ -56,4 +73,37 @@ func GetServerSerial() string {
 	}
 	defer db.Close()
 	return uuid
+}
+
+//GetValue 获取配置
+func GetValue(name string) string {
+	ResetMain()
+	db, _ := sql.Open("sqlite3", maindb)
+	v := ""
+	cmd := `SELECT [content] FROM [main] WHERE [rowid]=?;`
+	rows, err := db.Query(cmd, name)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		for rows.Next() {
+			var content string
+			e := rows.Scan(&content)
+			if e == nil {
+				v = content
+			}
+		}
+	}
+	defer db.Close()
+	return v
+}
+
+//SetValue 设置配置
+func SetValue(name string, value string) {
+	db, _ := sql.Open("sqlite3", maindb)
+	cmd := `REPLACE INTO [main] ([rowid], [content]) VALUES(?, ?);`
+	_, e := db.Exec(cmd, name, value)
+	if e != nil {
+		fmt.Println(e)
+	}
+	defer db.Close()
 }
