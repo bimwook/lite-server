@@ -152,6 +152,7 @@ func buildCenterSvr() {
 func main() {
 	startAt := woo.Now()
 	woo.ResetMain()
+	http.Handle("/www/", http.FileServer(http.Dir(".")))
 	http.HandleFunc("/now.do", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Server", servername)
 		w.Write([]byte(woo.Now()))
@@ -169,6 +170,7 @@ func main() {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		io.WriteString(w, "  Lite-Server is working...\r\n")
 		io.WriteString(w, "--------------------------------------\r\n")
+		io.WriteString(w, "  - www\r\n")
 		io.WriteString(w, "  - now.do\r\n")
 		io.WriteString(w, "  - center\r\n")
 		io.WriteString(w, "    - save.do\r\n")
