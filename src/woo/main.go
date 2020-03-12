@@ -14,8 +14,8 @@ import (
 //数据库地址
 const maindb = "./dbase/main.db"
 
-//IsDone 是否已接收到退出信号
-var IsDone = false
+//IsTerminated 是否已接收到退出信号
+var IsTerminated = false
 
 //Now 当前日期及时间
 func Now() string {

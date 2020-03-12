@@ -79,15 +79,15 @@ func buildMailSvr() {
 	chExit := make(chan bool)
 	go func() {
 		for {
-			if woo.IsDone {
-				chExit <- woo.IsDone
+			if woo.IsTerminated {
+				chExit <- woo.IsTerminated
 				break
 			}
 			time.Sleep(10)
 		}
 	}()
 	go func() {
-		for !woo.IsDone {
+		for !woo.IsTerminated {
 			select {
 			case item := <-chSave:
 				{
@@ -158,15 +158,15 @@ func buildCenterSvr() {
 	chExit := make(chan bool)
 	go func() {
 		for {
-			if woo.IsDone {
-				chExit <- woo.IsDone
+			if woo.IsTerminated {
+				chExit <- woo.IsTerminated
 				break
 			}
 			time.Sleep(10)
 		}
 	}()
 	go func() {
-		for !woo.IsDone {
+		for !woo.IsTerminated {
 			select {
 			case item := <-chSave:
 				{
@@ -239,7 +239,7 @@ func main() {
 	signal.Notify(chExit, os.Interrupt, os.Kill)
 	<-chExit
 
-	woo.IsDone = true
+	woo.IsTerminated = true
 	listener.Close()
 	fmt.Println("Waiting for 1s to Close...")
 	time.Sleep(time.Duration(1) * time.Second)
