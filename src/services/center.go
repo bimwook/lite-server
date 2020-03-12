@@ -25,6 +25,7 @@ func resetCache(name, dbase string) bool {
 	fn := dir + "/" + dbase + ".db"
 	os.MkdirAll(dir, os.ModePerm)
 	db, _ := sql.Open("sqlite3", fn)
+	defer db.Close()
 	cmd := `
 	  CREATE TABLE IF NOT EXISTS [meta] ([rowid] PRIMARY KEY, [name], [content]);
 	  CREATE TABLE IF NOT EXISTS [main] ([rowid] PRIMARY KEY, [hash], [remark], [data], [created]);
@@ -33,7 +34,6 @@ func resetCache(name, dbase string) bool {
 	  INSERT INTO [meta] ([rowid], [name], [content]) VALUES('db.created', 'SYSTEM', ?);
 	`
 	_, err := db.Exec(cmd, woo.GetServerSerial(), woo.NewSerial(), woo.Now())
-	defer db.Close()
 	if err != nil {
 		fmt.Println(err)
 		return false
@@ -56,9 +56,9 @@ func CenterSave(name, dbase, remark, data string) string {
 		resetCache(name, dbase)
 	}
 	db, _ := sql.Open("sqlite3", fn)
+	defer db.Close()
 	cmd := `INSERT INTO [main] ([rowid], [hash], [remark], [data], [created]) VALUES(?,?,?,?,?);`
 	_, err := db.Exec(cmd, rowid, Sha256(data), remark, data, woo.Now())
-	defer db.Close()
 	if err != nil {
 		fmt.Println(err)
 		return ""
@@ -73,8 +73,10 @@ func CenterHash(name, dbase, data string) string {
 	if exists {
 		hash := Sha256(data)
 		db, _ := sql.Open("sqlite3", fn)
+		defer db.Close()
 		cmd := `SELECT COUNT(*) AS [cnt] FROM [main] WHERE [hash]=?;`
 		rows, err := db.Query(cmd, hash)
+		defer rows.Close()
 		if err != nil {
 			fmt.Println(err)
 		} else {
@@ -85,8 +87,7 @@ func CenterHash(name, dbase, data string) string {
 				}
 			}
 		}
-		defer rows.Close()
-		defer db.Close()
+
 	}
 	return cnt
 }
@@ -98,8 +99,10 @@ func CenterLoad(name, dbase, rowid string) (string, string) {
 		remark := ""
 		data := ""
 		db, _ := sql.Open("sqlite3", fn)
+		defer db.Close()
 		cmd := `SELECT [remark],[data] FROM [main] WHERE [rowid]=?;`
 		rows, err := db.Query(cmd, rowid)
+		defer rows.Close()
 		if err != nil {
 			fmt.Println(err)
 		} else {
@@ -110,8 +113,7 @@ func CenterLoad(name, dbase, rowid string) (string, string) {
 				}
 			}
 		}
-		defer rows.Close()
-		defer db.Close()
+
 		return remark, data
 	}
 	return "BAD-ROWID", ""

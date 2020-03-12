@@ -11,7 +11,11 @@ import (
 	_ "github.com/mattn/go-sqlite3" //Sqlite3
 )
 
+//数据库地址
 const maindb = "./dbase/main.db"
+
+//IsDone 是否已接收到退出信号
+var IsDone = false
 
 //Now 当前日期及时间
 func Now() string {
@@ -34,6 +38,7 @@ func ResetMain() {
 	_, err := os.Stat(maindb)
 	if !((err == nil) || os.IsExist(err)) {
 		db, _ := sql.Open("sqlite3", maindb)
+		defer db.Close()
 		uuid := NewSerial()
 		cmd := `
       CREATE TABLE IF NOT EXISTS [main] ([rowid] PRIMARY KEY, [content]);
@@ -49,7 +54,6 @@ func ResetMain() {
 		if e != nil {
 			fmt.Println(e)
 		}
-		defer db.Close()
 	}
 }
 
@@ -57,6 +61,7 @@ func ResetMain() {
 func GetServerSerial() string {
 	ResetMain()
 	db, _ := sql.Open("sqlite3", maindb)
+	defer db.Close()
 	uuid := "BAD-KEY"
 	cmd := `SELECT [content] FROM [main] WHERE [rowid]='server.uuid';`
 	rows, err := db.Query(cmd)
@@ -71,7 +76,6 @@ func GetServerSerial() string {
 			}
 		}
 	}
-	defer db.Close()
 	return uuid
 }
 
@@ -79,6 +83,7 @@ func GetServerSerial() string {
 func GetValue(name string) string {
 	ResetMain()
 	db, _ := sql.Open("sqlite3", maindb)
+	defer db.Close()
 	v := ""
 	cmd := `SELECT [content] FROM [main] WHERE [rowid]=?;`
 	rows, err := db.Query(cmd, name)
@@ -93,17 +98,16 @@ func GetValue(name string) string {
 			}
 		}
 	}
-	defer db.Close()
 	return v
 }
 
 //SetValue 设置配置
 func SetValue(name string, value string) {
 	db, _ := sql.Open("sqlite3", maindb)
+	defer db.Close()
 	cmd := `REPLACE INTO [main] ([rowid], [content]) VALUES(?, ?);`
 	_, e := db.Exec(cmd, name, value)
 	if e != nil {
 		fmt.Println(e)
 	}
-	defer db.Close()
 }

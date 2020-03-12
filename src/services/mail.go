@@ -17,6 +17,7 @@ func ResetMailCache() bool {
 	_, err := os.Stat(mailcache)
 	if !((err == nil) || os.IsExist(err)) {
 		db, _ := sql.Open("sqlite3", mailcache)
+		defer db.Close()
 		cmd := `
 		CREATE TABLE IF NOT EXISTS [meta] ([rowid] PRIMARY KEY, [name], [data]);
 		CREATE TABLE IF NOT EXISTS [main] ([rowid] PRIMARY KEY, [module], [sender], [receiver], [data], [created], [status]);
@@ -27,7 +28,6 @@ func ResetMailCache() bool {
 		if e != nil {
 			fmt.Println(e)
 		}
-		defer db.Close()
 		return true
 	}
 	return false
@@ -36,6 +36,7 @@ func ResetMailCache() bool {
 //MailSave 保存
 func MailSave(rowid string, module string, sender string, receiver string, data string) string {
 	db, _ := sql.Open("sqlite3", mailcache)
+	defer db.Close()
 	cmd := `
 	  INSERT INTO [main] ([rowid], [module], [sender], [receiver], [data], [created], [status]) VALUES(?,?,?,?,?,?,?);
 	`
@@ -43,7 +44,6 @@ func MailSave(rowid string, module string, sender string, receiver string, data 
 	if err != nil {
 		fmt.Println(err)
 	}
-	defer db.Close()
 	return rowid
 }
 
@@ -51,8 +51,10 @@ func MailSave(rowid string, module string, sender string, receiver string, data 
 func MailPeek(module string, receiver string) string {
 	ret := ""
 	db, _ := sql.Open("sqlite3", mailcache)
+	defer db.Close()
 	cmd := `SELECT [sender], [data], [created] FROM [main] WHERE [module]=? AND [receiver]=? ORDER BY [created] ASC LIMIT 1;`
 	rows, err := db.Query(cmd, module, receiver)
+	defer rows.Close()
 	if err != nil {
 		fmt.Println(err)
 	} else {
@@ -66,8 +68,6 @@ func MailPeek(module string, receiver string) string {
 			}
 		}
 	}
-	defer rows.Close()
-	defer db.Close()
 	return ret
 }
 
@@ -76,8 +76,10 @@ func MailReceive(module string, receiver string) (string, string) {
 	rowid := ""
 	ret := ""
 	db, _ := sql.Open("sqlite3", mailcache)
+	defer db.Close()
 	cmd := `SELECT [rowid], [sender], [data], [created] FROM [main] WHERE [module]=? AND [receiver]=? ORDER BY [created] ASC LIMIT 1;`
 	rows, err := db.Query(cmd, module, receiver)
+	defer rows.Close()
 	if err != nil {
 		fmt.Println(err)
 	} else {
@@ -91,8 +93,6 @@ func MailReceive(module string, receiver string) (string, string) {
 			}
 		}
 	}
-	defer rows.Close()
-	defer db.Close()
 	return rowid, ret
 }
 

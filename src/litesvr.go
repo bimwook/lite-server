@@ -3,8 +3,12 @@ package main
 import (
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"os"
+	"os/signal"
 	"strconv"
+	"time"
 
 	"./services"
 	"./woo"
@@ -72,9 +76,18 @@ func buildMailSvr() {
 			io.WriteString(w, "Parametes: module, receiver;\r\n")
 		}
 	})
-
+	chExit := make(chan bool)
 	go func() {
 		for {
+			if woo.IsDone {
+				chExit <- woo.IsDone
+				break
+			}
+			time.Sleep(10)
+		}
+	}()
+	go func() {
+		for !woo.IsDone {
 			select {
 			case item := <-chSave:
 				{
@@ -84,8 +97,13 @@ func buildMailSvr() {
 				{
 					services.MailRemove(rowid)
 				}
+			case <-chExit:
+				{
+					break
+				}
 			}
 		}
+		fmt.Println("[Service] Mail: Closed.")
 	}()
 }
 
@@ -137,15 +155,30 @@ func buildCenterSvr() {
 		}
 	})
 
+	chExit := make(chan bool)
 	go func() {
 		for {
+			if woo.IsDone {
+				chExit <- woo.IsDone
+				break
+			}
+			time.Sleep(10)
+		}
+	}()
+	go func() {
+		for !woo.IsDone {
 			select {
 			case item := <-chSave:
 				{
 					services.CenterSave(item.Name, item.Dbase, item.Remark, item.Data)
 				}
+			case <-chExit:
+				{
+					break
+				}
 			}
 		}
+		fmt.Println("[Service] Center: Closed.")
 	}()
 }
 
@@ -197,5 +230,17 @@ func main() {
 	fmt.Println("------------------------------------------------------------------")
 	fmt.Println(" Start-At: " + startAt)
 
-	http.ListenAndServe(":"+strconv.Itoa(port), nil)
+	listener, _ := net.Listen("tcp", ":"+strconv.Itoa(port))
+	go func() {
+		http.Serve(listener, nil)
+	}()
+
+	chExit := make(chan os.Signal, 1)
+	signal.Notify(chExit, os.Interrupt, os.Kill)
+	<-chExit
+
+	woo.IsDone = true
+	listener.Close()
+	fmt.Println("Waiting for 1s to Close...")
+	time.Sleep(time.Duration(1) * time.Second)
 }
