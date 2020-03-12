@@ -1,11 +1,11 @@
-package services
+package mail
 
 import (
 	"database/sql"
 	"fmt"
 	"os"
 
-	"../woo"
+	"../../woo"
 
 	_ "github.com/mattn/go-sqlite3" //Sqlite3
 )
@@ -19,10 +19,10 @@ func ResetMailCache() bool {
 		db, _ := sql.Open("sqlite3", mailcache)
 		defer db.Close()
 		cmd := `
-		CREATE TABLE IF NOT EXISTS [meta] ([rowid] PRIMARY KEY, [name], [data]);
-		CREATE TABLE IF NOT EXISTS [main] ([rowid] PRIMARY KEY, [module], [sender], [receiver], [data], [created], [status]);
-		INSERT INTO [meta] ([rowid], [name], [data]) VALUES('db.uuid', 'SYSTEM', ?);
-		INSERT INTO [meta] ([rowid], [name], [data]) VALUES('db.created', 'SYSTEM', ?);
+			CREATE TABLE IF NOT EXISTS [meta] ([rowid] PRIMARY KEY, [name], [data]);
+			CREATE TABLE IF NOT EXISTS [main] ([rowid] PRIMARY KEY, [module], [sender], [receiver], [data], [created], [status]);
+			INSERT INTO [meta] ([rowid], [name], [data]) VALUES('db.uuid', 'SYSTEM', ?);
+			INSERT INTO [meta] ([rowid], [name], [data]) VALUES('db.created', 'SYSTEM', ?);
 	  `
 		_, e := db.Exec(cmd, woo.NewSerial(), woo.Now())
 		if e != nil {
@@ -33,12 +33,12 @@ func ResetMailCache() bool {
 	return false
 }
 
-//MailSave 保存
-func MailSave(rowid string, module string, sender string, receiver string, data string) string {
+//Save 保存
+func Save(rowid string, module string, sender string, receiver string, data string) string {
 	db, _ := sql.Open("sqlite3", mailcache)
 	defer db.Close()
 	cmd := `
-	  INSERT INTO [main] ([rowid], [module], [sender], [receiver], [data], [created], [status]) VALUES(?,?,?,?,?,?,?);
+		INSERT INTO [main] ([rowid], [module], [sender], [receiver], [data], [created], [status]) VALUES(?,?,?,?,?,?,?);
 	`
 	_, err := db.Exec(cmd, rowid, module, sender, receiver, data, woo.Now(), 0)
 	if err != nil {
@@ -47,8 +47,8 @@ func MailSave(rowid string, module string, sender string, receiver string, data 
 	return rowid
 }
 
-//MailPeek 窥
-func MailPeek(module string, receiver string) string {
+//Peek 窥
+func Peek(module string, receiver string) string {
 	ret := ""
 	db, _ := sql.Open("sqlite3", mailcache)
 	defer db.Close()
@@ -71,8 +71,8 @@ func MailPeek(module string, receiver string) string {
 	return ret
 }
 
-//MailReceive 接收
-func MailReceive(module string, receiver string) (string, string) {
+//Receive 接收
+func Receive(module string, receiver string) (string, string) {
 	rowid := ""
 	ret := ""
 	db, _ := sql.Open("sqlite3", mailcache)
@@ -96,8 +96,8 @@ func MailReceive(module string, receiver string) (string, string) {
 	return rowid, ret
 }
 
-//MailRemove 删除
-func MailRemove(rowid string) bool {
+//Remove 删除
+func Remove(rowid string) bool {
 	db, _ := sql.Open("sqlite3", mailcache)
 	cmd := `DELETE FROM [main] WHERE [rowid]=?;`
 	_, err := db.Exec(cmd, rowid)

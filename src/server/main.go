@@ -1,36 +1,22 @@
-package woo
+package server
 
 import (
 	"database/sql"
 	"fmt"
-	"math/rand"
 	"os"
-	"strconv"
-	"time"
 
+	"../woo"
 	_ "github.com/mattn/go-sqlite3" //Sqlite3
 )
+
+//ServerName 服务器标识
+const ServerName = "Lite-Server/1.1"
 
 //数据库地址
 const maindb = "./dbase/main.db"
 
 //IsTerminated 是否已接收到退出信号
 var IsTerminated = false
-
-//Now 当前日期及时间
-func Now() string {
-	return time.Now().Format("2006-01-02 15:04:05")
-}
-
-//NewSerial 返回一个随机字符串
-func NewSerial() string {
-	ret := time.Now().Format("20060102")
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	for i := 0; i < 40; i++ {
-		ret = ret + strconv.Itoa(r.Intn(10))
-	}
-	return ret
-}
 
 //ResetMain 初始化
 func ResetMain() {
@@ -39,7 +25,7 @@ func ResetMain() {
 	if !((err == nil) || os.IsExist(err)) {
 		db, _ := sql.Open("sqlite3", maindb)
 		defer db.Close()
-		uuid := NewSerial()
+		uuid := woo.NewSerial()
 		cmd := `
       CREATE TABLE IF NOT EXISTS [main] ([rowid] PRIMARY KEY, [content]);
       CREATE TABLE IF NOT EXISTS [meta] ([rowid] PRIMARY KEY, [name], [content]);
@@ -50,7 +36,7 @@ func ResetMain() {
       INSERT INTO [meta] ([rowid], [name], [content]) VALUES('server.created', 'SYSTEM', ?);
       INSERT INTO [main] ([rowid], [content]) VALUES('server.uuid', ?);
     `
-		_, e := db.Exec(cmd, uuid, Now(), uuid)
+		_, e := db.Exec(cmd, uuid, woo.Now(), uuid)
 		if e != nil {
 			fmt.Println(e)
 		}
