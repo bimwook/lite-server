@@ -7,6 +7,6 @@ import (
 
 //Start 启动服务
 func Start() {
-	mail.BuildSvr()
-	center.BuildSvr()
+	mail.Start()
+	center.Start()
 }

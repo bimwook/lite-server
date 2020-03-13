@@ -9,8 +9,8 @@ import (
 	"../../server"
 )
 
-//BuildSvr 初始化数据服务
-func BuildSvr() {
+//Start 初始化数据服务
+func Start() {
 	chSave := make(chan *Item)
 	http.HandleFunc("/center/save.do", func(w http.ResponseWriter, r *http.Request) {
 		method := r.Method
@@ -67,6 +67,7 @@ func BuildSvr() {
 			}
 			time.Sleep(10)
 		}
+		fmt.Println("[Service] Center: Closing...")
 	}()
 	go func() {
 		for !server.IsTerminated {

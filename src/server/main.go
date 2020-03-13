@@ -18,8 +18,13 @@ const maindb = "./dbase/main.db"
 //IsTerminated 是否已接收到退出信号
 var IsTerminated = false
 
-//ResetMain 初始化
-func ResetMain() {
+//Start 初始化
+func Start() {
+	reset()
+}
+
+//reset 初始化
+func reset() {
 	os.MkdirAll("./dbase", os.ModePerm)
 	_, err := os.Stat(maindb)
 	if !((err == nil) || os.IsExist(err)) {
@@ -45,7 +50,7 @@ func ResetMain() {
 
 //GetServerSerial 获取服务器标识
 func GetServerSerial() string {
-	ResetMain()
+	reset()
 	db, _ := sql.Open("sqlite3", maindb)
 	defer db.Close()
 	uuid := "BAD-KEY"
@@ -67,7 +72,7 @@ func GetServerSerial() string {
 
 //GetValue 获取配置
 func GetValue(name string) string {
-	ResetMain()
+	reset()
 	db, _ := sql.Open("sqlite3", maindb)
 	defer db.Close()
 	v := ""
@@ -89,6 +94,7 @@ func GetValue(name string) string {
 
 //SetValue 设置配置
 func SetValue(name string, value string) {
+	reset()
 	db, _ := sql.Open("sqlite3", maindb)
 	defer db.Close()
 	cmd := `REPLACE INTO [main] ([rowid], [content]) VALUES(?, ?);`

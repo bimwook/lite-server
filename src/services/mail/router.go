@@ -10,8 +10,8 @@ import (
 	"../../woo"
 )
 
-//BuildSvr 初始化邮件服务
-func BuildSvr() {
+//Start 初始化邮件服务
+func Start() {
 	ResetMailCache()
 	chSave := make(chan *Item)
 	chRemove := make(chan string)
@@ -72,6 +72,7 @@ func BuildSvr() {
 			}
 			time.Sleep(10)
 		}
+		fmt.Println("[Service] Mail: Closing...")
 	}()
 	go func() {
 		for !server.IsTerminated {
