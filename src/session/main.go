@@ -3,46 +3,26 @@ package session
 import (
 	"database/sql"
 	"fmt"
-	"os"
 	"time"
 
+	"../member"
 	"../server"
 	"../woo"
 	_ "github.com/mattn/go-sqlite3" //Sqlite3
 )
 
 //数据库地址
-const maindb = "./dbase/session.db"
 
 var sessions, _ = sql.Open("sqlite3", ":memory:")
 
-//Start 初始化
-func Start() bool {
-	os.MkdirAll("./dbase", os.ModePerm)
-	_, err := os.Stat(maindb)
-	if !((err == nil) || os.IsExist(err)) {
-		db, _ := sql.Open("sqlite3", maindb)
-		defer db.Close()
-		cmd := `
-			CREATE TABLE IF NOT EXISTS [meta] ([rowid] PRIMARY KEY, [name], [content]);
-			CREATE TABLE IF NOT EXISTS [main] ([rowid] PRIMARY KEY, [name], [secret], [token], [level], [created]);
-		`
-		db.Exec(cmd)
-		cmd = `
-			INSERT INTO [meta] ([rowid], [name], [content]) VALUES('server.uuid', 'SYSTEM', ?);
-			INSERT INTO [meta] ([rowid], [name], [content]) VALUES('db.uuid', 'SYSTEM', ?);
-			INSERT INTO [meta] ([rowid], [name], [content]) VALUES('db.created', 'SYSTEM', ?);
-		`
-		db.Exec(cmd, server.GetServerSerial(), woo.NewSerial(), woo.Now())
-		cmd = `
-			INSERT INTO [main] ([rowid], [name], [secret], [token], [level], [created]) VALUES(?,?,?,?,?,?);
-		`
-		db.Exec(cmd, "root", "root", "110629", woo.NewSerial(), 999, woo.Now())
+type oSession struct {
+}
 
-	}
+//Start 初始化
+func (s *oSession) Start() bool {
 	cmd := `
 		CREATE TABLE IF NOT EXISTS [meta] ([rowid] PRIMARY KEY, [name], [content]);
-		CREATE TABLE IF NOT EXISTS [main] ([rowid] PRIMARY KEY, [name], [token], [created], [modified]);
+		CREATE TABLE IF NOT EXISTS [main] ([rowid] PRIMARY KEY, [name], [created], [modified]);
 	`
 	sessions.Exec(cmd)
 	go func() {
@@ -60,11 +40,58 @@ func Start() bool {
 }
 
 //CheckIn 开启新会话
-func CheckIn() {
+func (s *oSession) CheckIn(name string, secret string) (string, bool) {
+	ret := member.Actions.Check(name, secret)
+	token := ""
+	if ret {
+		token = woo.NewSerial()
+		cmd := `INSERT INTO [main] ([rowid], [name], [created], [modified]) VALUES(?,?,?,?);`
+		sessions.Exec(cmd, token, name, woo.Now(), woo.Now())
+	}
+	return token, ret
+}
 
+// Check 检查会话状态
+func (s *oSession) Check(name string, token string) bool {
+	cmd := `SELECT [rowid] FROM [main] WHERE [rowid]=? AND [name]=?;`
+	rowid := ""
+	rows, e := sessions.Query(cmd, token, name)
+	if e == nil {
+		if rows.Next() {
+			rows.Scan(&rowid)
+		} else {
+			rowid = ""
+		}
+		rows.Close()
+	}
+	if rowid == "" {
+		return false
+	}
+	sessions.Exec("UPDATE [main] SET [modified]=? WHERE [rowid]=?;", woo.Now(), token)
+	return true
 }
 
 //CheckOut 关闭会话
-func CheckOut() {
+func (s *oSession) CheckOut(name string, token string) bool {
+	cmd := `SELECT [rowid] FROM [main] WHERE [rowid]=? AND [name]=?;`
+	rowid := ""
+	rows, e := sessions.Query(cmd, token, name)
+	if e == nil {
+		if rows.Next() {
+			rows.Scan(&rowid)
+		} else {
+			rowid = ""
+		}
+		rows.Close()
+	}
+	if rowid == "" {
+		return false
+	}
+	sessions.Exec("DELETE FROM [main] WHERE [rowid]=?;", token)
+	return true
+}
 
+//GetActions 获取接口
+func (s *oSession) GetActions() ISession {
+	return s
 }

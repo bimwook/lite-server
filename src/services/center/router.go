@@ -7,22 +7,25 @@ import (
 	"time"
 
 	"../../server"
+	"../../woo"
 )
 
 //Start 初始化数据服务
 func Start() {
+	center := oCenter{}
 	chSave := make(chan *Item)
 	http.HandleFunc("/center/save.do", func(w http.ResponseWriter, r *http.Request) {
 		method := r.Method
 		if method == "POST" {
 			var item Item
+			item.Rowid = woo.NewSerial()
 			item.Name = r.FormValue("name")
 			item.Dbase = r.FormValue("dbase")
 			item.Remark = r.FormValue("remark")
 			item.Data = r.FormValue("data")
 			chSave <- &item
 			w.Header().Set("Server", server.ServerName)
-			io.WriteString(w, `{"ret":true,"rowid":""}`)
+			io.WriteString(w, `{"ret":true,"rowid":"`+item.Rowid+`"}`)
 		} else {
 			io.WriteString(w, "//Method: POST;\r\n")
 			io.WriteString(w, "//Parametes: name, dbase, remark, data;\r\n")
@@ -34,7 +37,7 @@ func Start() {
 			name := r.FormValue("name")
 			dbase := r.FormValue("dbase")
 			data := r.FormValue("data")
-			hcount := Hash(name, dbase, data)
+			hcount := center.Hash(name, dbase, data)
 			w.Header().Set("Server", server.ServerName)
 			io.WriteString(w, `{"ret":true,"count":`+hcount+`}`)
 		} else {
@@ -48,10 +51,10 @@ func Start() {
 			name := r.FormValue("name")
 			dbase := r.FormValue("dbase")
 			rowid := r.FormValue("rowid")
-			remark, data := Load(name, dbase, rowid)
+			item := center.Load(name, dbase, rowid)
 			w.Header().Set("Server", server.ServerName)
-			io.WriteString(w, "# "+remark+"\r\n")
-			io.WriteString(w, data)
+			io.WriteString(w, "# "+item.Remark+"\r\n")
+			io.WriteString(w, item.Data)
 		} else {
 			io.WriteString(w, "//Method: POST;\r\n")
 			io.WriteString(w, "//Parametes: name, dbase, rowid;\r\n")
@@ -74,7 +77,7 @@ func Start() {
 			select {
 			case item := <-chSave:
 				{
-					Save(item.Name, item.Dbase, item.Remark, item.Data)
+					center.Save(item)
 				}
 			case <-chExit:
 				{

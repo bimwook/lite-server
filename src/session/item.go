@@ -2,16 +2,15 @@ package session
 
 //Item 项
 type Item struct {
-	Rowid  string
-	Name   string
-	Secret string
-	Token  string
-	Level  int32
+	Rowid    string
+	Name     string
+	Created  string
+	Modified string
 }
 
-//Session 会话接口
-type Session interface {
-	CheckIn(name string, secret string) (bool, string)
-	CheckOut() bool
-	New(item Item)
+//ISession 会话接口
+type ISession interface {
+	CheckIn(name string, secret string) (string, bool)
+	Check(name string, token string) bool
+	CheckOut(name string, token string) bool
 }

@@ -25,9 +25,8 @@ func Now() string {
 //NewSerial 返回一个随机字符串
 func NewSerial() string {
 	ret := time.Now().Format("20060102")
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < 40; i++ {
-		ret = ret + strconv.Itoa(r.Intn(10))
+		ret = ret + strconv.Itoa(rand.Intn(10))
 	}
 	return ret
 }

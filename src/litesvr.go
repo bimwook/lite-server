@@ -3,12 +3,14 @@ package main
 import (
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
 	"time"
 
+	"./member"
 	"./server"
 	"./services"
 	"./session"
@@ -17,7 +19,9 @@ import (
 
 func main() {
 	startAt := woo.Now()
+	rand.Seed(time.Now().UnixNano())
 	server.Start()
+	member.Start()
 	session.Start()
 	http.HandleFunc("/", server.Index)
 	os.MkdirAll("./www", os.ModePerm)
