@@ -32,14 +32,14 @@ func reset() {
 		defer db.Close()
 		uuid := woo.NewSerial()
 		cmd := `
-      CREATE TABLE IF NOT EXISTS [main] ([rowid] PRIMARY KEY, [content]);
-      CREATE TABLE IF NOT EXISTS [meta] ([rowid] PRIMARY KEY, [name], [content]);
-      INSERT INTO [meta] ([rowid], [name], [content]) VALUES('about.author', 'SYSTEM', '杨波 ( Bamboo Young )');
-      INSERT INTO [meta] ([rowid], [name], [content]) VALUES('about.email', 'SYSTEM', 'lokme@foxmail.com');
-      INSERT INTO [meta] ([rowid], [name], [content]) VALUES('about.website', 'SYSTEM', 'https://me.bimwook.com');
-      INSERT INTO [meta] ([rowid], [name], [content]) VALUES('server.uuid', 'SYSTEM', ?);
-      INSERT INTO [meta] ([rowid], [name], [content]) VALUES('server.created', 'SYSTEM', ?);
-      INSERT INTO [main] ([rowid], [content]) VALUES('server.uuid', ?);
+			CREATE TABLE IF NOT EXISTS [main] ([rowid] PRIMARY KEY, [content]);
+			CREATE TABLE IF NOT EXISTS [meta] ([rowid] PRIMARY KEY, [name], [content]);
+			INSERT INTO [meta] ([rowid], [name], [content]) VALUES('about.author', 'SYSTEM', '杨波 ( Bamboo Young )');
+			INSERT INTO [meta] ([rowid], [name], [content]) VALUES('about.email', 'SYSTEM', 'lokme@foxmail.com');
+			INSERT INTO [meta] ([rowid], [name], [content]) VALUES('about.website', 'SYSTEM', 'https://me.bimwook.com');
+			INSERT INTO [meta] ([rowid], [name], [content]) VALUES('server.uuid', 'SYSTEM', ?);
+			INSERT INTO [meta] ([rowid], [name], [content]) VALUES('server.created', 'SYSTEM', ?);
+			INSERT INTO [main] ([rowid], [content]) VALUES('server.uuid', ?);
     `
 		_, e := db.Exec(cmd, uuid, woo.Now(), uuid)
 		if e != nil {
