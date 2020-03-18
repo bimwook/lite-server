@@ -10,9 +10,15 @@ import (
 	"../../woo"
 )
 
+//Actions 消息服务
+var Actions IMail
+
 //Start 初始化邮件服务
 func Start() {
-	ResetMailCache()
+	mail := oMail{maindb: "./dbase/mail.db"}
+
+	mail.Start()
+	Actions = mail.GetActions()
 	chSave := make(chan *Item)
 	chRemove := make(chan string)
 	http.HandleFunc("/mail/save.do", func(w http.ResponseWriter, r *http.Request) {
@@ -40,7 +46,7 @@ func Start() {
 			receiver := r.FormValue("receiver")
 			w.Header().Set("Server", server.ServerName)
 			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-			io.WriteString(w, Peek(module, receiver))
+			io.WriteString(w, mail.Peek(module, receiver))
 		} else {
 			io.WriteString(w, "Method: POST;\r\n")
 			io.WriteString(w, "Parametes: module, receiver;\r\n")
@@ -53,7 +59,7 @@ func Start() {
 			receiver := r.FormValue("receiver")
 			w.Header().Set("Server", server.ServerName)
 			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-			rowid, data := Receive(module, receiver)
+			rowid, data := mail.Receive(module, receiver)
 			io.WriteString(w, data)
 			if rowid != "" {
 				chRemove <- rowid
@@ -79,11 +85,11 @@ func Start() {
 			select {
 			case item := <-chSave:
 				{
-					Save(item.Rowid, item.Module, item.Sender, item.Receiver, item.Data)
+					mail.Save(item)
 				}
 			case rowid := <-chRemove:
 				{
-					Remove(rowid)
+					mail.Remove(rowid)
 				}
 			case <-chExit:
 				{

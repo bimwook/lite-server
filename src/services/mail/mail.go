@@ -10,13 +10,16 @@ import (
 	_ "github.com/mattn/go-sqlite3" //Sqlite3
 )
 
-const mailcache = "./dbase/mail.db"
+type oMail struct {
+	maindb string
+}
 
 //ResetMailCache 初始化
-func ResetMailCache() bool {
-	_, err := os.Stat(mailcache)
+func (o *oMail) Start() bool {
+	_, err := os.Stat(o.maindb)
 	if !((err == nil) || os.IsExist(err)) {
-		db, error := sql.Open("sqlite3", mailcache)
+		os.MkdirAll("./dbase", os.ModePerm)
+		db, error := sql.Open("sqlite3", o.maindb)
 		if error == nil {
 			defer db.Close()
 			cmd := `
@@ -36,26 +39,26 @@ func ResetMailCache() bool {
 }
 
 //Save 保存
-func Save(rowid string, module string, sender string, receiver string, data string) string {
-	db, error := sql.Open("sqlite3", mailcache)
+func (o *oMail) Save(item *Item) string {
+	db, error := sql.Open("sqlite3", o.maindb)
 	if error == nil {
 		defer db.Close()
 		cmd := `
 			INSERT INTO [main] ([rowid], [module], [sender], [receiver], [data], [created], [status]) VALUES(?,?,?,?,?,?,?);
 		`
-		_, err := db.Exec(cmd, rowid, module, sender, receiver, data, woo.Now(), 0)
+		_, err := db.Exec(cmd, item.Rowid, item.Module, item.Sender, item.Receiver, item.Data, woo.Now(), 0)
 		if err != nil {
 			fmt.Println(err)
 		}
-		return rowid
+		return item.Rowid
 	}
 	return ""
 }
 
 //Peek 窥
-func Peek(module string, receiver string) string {
+func (o *oMail) Peek(module string, receiver string) string {
 	ret := ""
-	db, error := sql.Open("sqlite3", mailcache)
+	db, error := sql.Open("sqlite3", o.maindb)
 	if error == nil {
 		defer db.Close()
 		cmd := `SELECT [sender], [data], [created] FROM [main] WHERE [module]=? AND [receiver]=? ORDER BY [created] ASC LIMIT 1;`
@@ -79,10 +82,10 @@ func Peek(module string, receiver string) string {
 }
 
 //Receive 接收
-func Receive(module string, receiver string) (string, string) {
+func (o *oMail) Receive(module string, receiver string) (string, string) {
 	rowid := ""
 	ret := ""
-	db, error := sql.Open("sqlite3", mailcache)
+	db, error := sql.Open("sqlite3", o.maindb)
 	if error == nil {
 		defer db.Close()
 		cmd := `SELECT [rowid], [sender], [data], [created] FROM [main] WHERE [module]=? AND [receiver]=? ORDER BY [created] ASC LIMIT 1;`
@@ -107,8 +110,8 @@ func Receive(module string, receiver string) (string, string) {
 }
 
 //Remove 删除
-func Remove(rowid string) bool {
-	db, error := sql.Open("sqlite3", mailcache)
+func (o *oMail) Remove(rowid string) bool {
+	db, error := sql.Open("sqlite3", o.maindb)
 	if error == nil {
 		cmd := `DELETE FROM [main] WHERE [rowid]=?;`
 		_, err := db.Exec(cmd, rowid)
@@ -120,4 +123,9 @@ func Remove(rowid string) bool {
 		return true
 	}
 	return false
+}
+
+//GetActions 获取接口
+func (o *oMail) GetActions() IMail {
+	return o
 }
